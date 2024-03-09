@@ -14,7 +14,7 @@ function sum(a, b) {
 }
 
 const obj = {
-  value: 3,
+  value: 3
 };
 
 // 期望输出: 6
