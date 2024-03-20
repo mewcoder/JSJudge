@@ -1,78 +1,43 @@
 class Scheduler {
-  constructor(max = 2) {
-    this.max = max;
+  constructor(num = 2) {
+    this.max = num;
     this.queue = [];
     this.count = 0;
   }
-  add(task) {
+  add(promiseCreator) {
     return new Promise((resolve) => {
-      // 关键，保存 resolve
-      task.resolve = resolve;
-      this.queue.push(task);
+      promiseCreator._resolve = resolve;  // 关键点，怎么缓存这个 resolve; reject 同理
+      this.queue.push(promiseCreator);
       this.run();
     });
   }
   run() {
     if (this.count >= this.max || this.queue.length === 0) return;
     this.count++;
-    const fn = this.queue.shift();
-    fn()
-      .then(() => {
-        fn.resolve();
-        this._next();
+    const promise = this.queue.shift();
+    promise()
+      .then(res => {
+        promise._resolve(res);
+      }).finally(() => {
+        this.count--;
+        this.run();
       })
-      .catch(() => {
-        this._next();
-      });
-  }
-  _next() {
-    this.count--;
-    this.run();
   }
 }
-// class Scheduler {
-//   constructor(max=2) {
-//     this.max = max;
-//     this.queue = [];
-//     this.running = 0;
-//   }
-//   add(task) {
-//     return new Promise((resolve) => {
-//       // 关键，加了一层 Promise 的封装，将其 resolve 的函数交出去
-//       task.resolve = resolve;
-//       if (this.running < this.max) {
-//         this.run(task);
-//       } else {
-//         this.queue.push(task);
-//       }
-//     });
-//   }
-//   async run(task) {
-//     if (task && typeof task === "function") {
-//       this.running++;
-//       await task();
-//       task.resolve();
-//       this.running--;
-//       const fn = this.queue.shift();
-//       this.run(fn);
-//     }
-//   }
-// }
 
 // 测试
-const timeout = (time) =>
-  new Promise((resolve) => {
-    setTimeout(resolve, time);
-  });
+const timeout = (time) => new Promise((resolve) => {
+  setTimeout(resolve, time);
+});
 
 const scheduler = new Scheduler();
 const addTask = (time, order) => {
   scheduler.add(() => timeout(time)).then(() => console.log(order));
 };
 
-addTask(1000, "1");
-addTask(500, "2");
-addTask(300, "3");
-addTask(400, "4");
+addTask(1000, '1');
+addTask(500, '2');
+addTask(300, '3');
+addTask(400, '4');
 
-// 输出: 2 3 1 4
+// 期望输出: 2 3 1 4
